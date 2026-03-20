@@ -1,0 +1,54 @@
+Senior Software Engineer — Platform Infrastructure
+Meridian Financial Technologies | Austin, TX (Hybrid)
+
+About Meridian
+
+Meridian Financial Technologies builds the compliance and risk infrastructure that powers mid-market investment firms across North America. Our platform processes over $40B in transactions annually and is subject to SEC, FINRA, and SOC 2 Type II requirements. We're a 180-person company that has grown 3x in the past two years, and the engineering team is expanding to keep pace.
+
+This isn't a growth-stage startup with a ping-pong table and vibes. We ship software that has to be correct. Our on-call rotation is real, our incident reviews are blameless but rigorous, and our engineers are expected to own their systems end-to-end — from schema migrations to runbook updates.
+
+The Role
+
+We're looking for a senior engineer to join the Platform Infrastructure team. You'll work primarily on the internal developer platform — the CI/CD pipelines, deployment tooling, secrets management, and the service mesh that roughly 60 engineers depend on every day.
+
+About 40% of your time will be Kubernetes: writing controllers, debugging scheduling issues, tuning resource quotas. Another 30% is Python — we have a large internal tooling surface written in Python 3.11+, and we're gradually migrating older scripts to proper services. The remaining time is architectural: working with team leads on capacity planning, dependency audits, and the occasional greenfield service.
+
+This role is not a pure SRE role. You will write production code. You will also get paged at 2am if something you deployed causes a P0.
+
+What We Require
+
+Candidates must have at least 7 years of professional software engineering experience. Specifically:
+
+- Strong Python fluency (3.8+). Not scripting-level — we mean writing testable, maintainable services with proper packaging, dependency management, and CI.
+- Production Kubernetes experience. You should be comfortable with kubectl, Helm charts, and custom controllers. CKA certification is not required but suggests you know the material.
+- Familiarity with distributed systems concepts: consensus, idempotency, backpressure, at-least-once vs exactly-once delivery.
+- PostgreSQL — query optimization, index design, understanding of MVCC.
+- Experience operating in a regulated environment (SOC 2, PCI, HIPAA, or similar).
+- Strong communication skills. We do a lot of async writing (RFCs, design docs, ADRs) and expect engineers at this level to lead technical discussions, not just participate.
+
+What Would Help (But Isn't Required)
+
+If you have experience with any of the following, mention it — it'll make your application stand out:
+
+- Rust. We're not a Rust shop yet, but we have one service written in it and would love someone who can grow that footprint.
+- Apache Kafka or other event streaming platforms (we use Kafka for our audit log pipeline).
+- Terraform or Pulumi for infrastructure as code.
+- Previous work at a financial services company or fintech.
+- Experience building internal developer portals (Backstage or similar).
+
+Compensation and Logistics
+
+This is a full-time, permanent position. We offer a hybrid schedule: engineers are expected in our Austin office on Tuesdays and Thursdays. Remote candidates outside Austin will not be considered for this particular role.
+
+Salary range: $155,000–$195,000 base, depending on experience. We also offer equity (0.05–0.15% ISO options on a 4-year vest with a 1-year cliff), a 4% 401k match, and fully employer-paid health, dental, and vision for employees and dependents.
+
+The Interview Process
+
+1. 30-minute recruiter screen
+2. 60-minute technical screen with two platform engineers (systems design and a live debugging exercise)
+3. Take-home: a small Kubernetes controller task (we pay $200 for your time regardless of outcome)
+4. Final round: three 45-minute interviews with senior engineers and the engineering manager
+
+We aim to complete the process in under three weeks. We don't do whiteboard leetcode. The take-home is the hardest part.
+
+To apply, send your resume and a brief note about a distributed systems problem you've debugged or designed around to careers@meridianft.com. Generic cover letters will be ignored.

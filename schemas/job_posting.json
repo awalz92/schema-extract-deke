@@ -1,0 +1,84 @@
+{
+  "name": "job_posting",
+  "description": "Extracts structured information from a job posting for a software engineering role.",
+  "version": "1.0",
+  "fields": [
+    {
+      "name": "company_name",
+      "type": "str",
+      "description": "The name of the hiring company or organization.",
+      "required": true,
+      "examples": ["Acme Corp", "Stripe", "Northfield Health Systems"]
+    },
+    {
+      "name": "job_title",
+      "type": "str",
+      "description": "The exact job title as stated in the posting.",
+      "required": true,
+      "examples": ["Senior Software Engineer", "Staff Backend Engineer", "Principal Engineer, Platform"]
+    },
+    {
+      "name": "required_skills",
+      "type": "list",
+      "description": "Technologies, languages, frameworks, or methodologies explicitly required for the role.",
+      "required": true,
+      "examples": ["Python", "Kubernetes", "PostgreSQL", "REST API design"]
+    },
+    {
+      "name": "preferred_skills",
+      "type": "list",
+      "description": "Skills listed as nice-to-have, preferred, or a bonus — but not strictly required.",
+      "required": false,
+      "examples": ["Rust", "Apache Kafka", "experience with HIPAA compliance"]
+    },
+    {
+      "name": "years_experience_min",
+      "type": "int",
+      "description": "Minimum years of experience required. Extract the lower bound of any range.",
+      "required": false,
+      "examples": ["3", "5", "7"]
+    },
+    {
+      "name": "years_experience_max",
+      "type": "int",
+      "description": "Maximum years of experience stated. Extract the upper bound of any range, or null if only a minimum is given.",
+      "required": false,
+      "examples": ["5", "10"]
+    },
+    {
+      "name": "salary_min",
+      "type": "int",
+      "description": "Minimum annual salary in the local currency as a plain integer with no symbols or commas.",
+      "required": false,
+      "examples": ["120000", "95000"]
+    },
+    {
+      "name": "salary_max",
+      "type": "int",
+      "description": "Maximum annual salary in the local currency as a plain integer with no symbols or commas.",
+      "required": false,
+      "examples": ["160000", "140000"]
+    },
+    {
+      "name": "location",
+      "type": "str",
+      "description": "Primary work location: city, state/country, or 'Remote'.",
+      "required": false,
+      "examples": ["San Francisco, CA", "New York, NY", "London, UK", "Remote"]
+    },
+    {
+      "name": "remote_policy",
+      "type": "str",
+      "description": "The company's remote work policy as stated or implied.",
+      "required": false,
+      "examples": ["fully remote", "hybrid (2 days in office)", "on-site only"]
+    },
+    {
+      "name": "employment_type",
+      "type": "str",
+      "description": "Whether the role is full-time, part-time, contract, or other.",
+      "required": false,
+      "examples": ["full-time", "contract", "part-time"]
+    }
+  ]
+}
