@@ -6,6 +6,14 @@ from schema_extract.models.schemas import ExtractionSchema, FieldDefinition
 
 logger = logging.getLogger(__name__)
 
+_RULES = """\
+RULES:
+- Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
+- Use null for any field that cannot be determined from the document.
+- For list fields, return a JSON array of strings.
+- For int fields, return a number with no units or currency symbols.
+- Do not infer or guess values that are not present in the document."""
+
 
 def _format_field(field: FieldDefinition) -> str:
     """Format a single FieldDefinition into a human-readable prompt line."""
@@ -49,12 +57,7 @@ SCHEMA: {schema.name}
 FIELDS TO EXTRACT:
 {fields_block}
 
-RULES:
-- Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
-- Use null for any field that cannot be determined from the document.
-- For list fields, return a JSON array of strings.
-- For int fields, return a number with no units or currency symbols.
-- Do not infer or guess values that are not present in the document.
+{_RULES}
 
 DOCUMENT:
 {document}
@@ -110,12 +113,7 @@ YOUR PREVIOUS RESPONSE (which had errors):
 ERRORS IN YOUR PREVIOUS RESPONSE:
 {errors_block}
 
-RULES:
-- Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
-- Use null for any field that cannot be determined from the document.
-- For list fields, return a JSON array of strings.
-- For int fields, return a number with no units or currency symbols.
-- Do not infer or guess values that are not present in the document.
+{_RULES}
 
 DOCUMENT:
 {document}

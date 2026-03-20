@@ -80,6 +80,14 @@ class TestValidateExtraction:
             assert hard_errors == [], f"Expected coercion success for {val!r}"
             assert result.extracted["flag"] is False
 
+    def test_bool_on_int_field_is_hard_error(self):
+        # bool is a subclass of int in Python; isinstance(True, int) is True.
+        # Without an explicit guard, True would silently pass as 1.
+        schema = make_schema([{"name": "count", "type": "int"}])
+        result, hard_errors = validate_extraction({"count": True}, schema)
+        assert len(hard_errors) == 1
+        assert result.extracted["count"] is None
+
     def test_non_coercible_type_is_hard_error(self):
         schema = make_schema([{"name": "count", "type": "int"}])
         parsed = {"count": "five"}

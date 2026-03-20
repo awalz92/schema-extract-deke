@@ -5,9 +5,10 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# Matches an optional opening fence (```json or ```) and everything after
-# the closing fence (trailing prose). Captures the content in between.
-_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
+# Matches the first opening fence (```json or ```) anywhere in the string and
+# captures content up to the closing fence. The ^ anchor is intentionally absent
+# so preamble sentences ("Here is the JSON:") before the fence are skipped.
+_FENCE_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
 
 
 def clean_response(raw: str) -> str:

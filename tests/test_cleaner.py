@@ -39,6 +39,12 @@ class TestCleanResponse:
         raw = "```json\n```"
         assert clean_response(raw) == ""
 
+    def test_preamble_sentence_before_fence(self):
+        # Models often write "Here is the extracted JSON:" before the fence.
+        # The ^ anchor would cause a miss — this verifies it doesn't.
+        raw = 'Here is the extracted JSON:\n```json\n{"key": "value"}\n```'
+        assert clean_response(raw) == '{"key": "value"}'
+
     def test_empty_string(self):
         assert clean_response("") == ""
 

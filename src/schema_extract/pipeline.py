@@ -23,7 +23,7 @@ _DEFAULT_SCHEMA = _REPO_ROOT / "schemas" / "job_posting.json"
 _DEFAULT_SAMPLE = _REPO_ROOT / "samples" / "job_postings" / "sample_01.txt"
 
 
-def run_extraction(schema_path: Path, document_text: str) -> ExtractionResult:
+def run_extraction(schema_path: Path, document_text: str, model: str = MODEL) -> ExtractionResult:
     """Load a schema, build a prompt, call Ollama, clean + validate the response.
 
     Retries up to MAX_RETRIES times on hard failures (JSON parse errors or field
@@ -58,7 +58,7 @@ def run_extraction(schema_path: Path, document_text: str) -> ExtractionResult:
         for attempt in range(1, MAX_RETRIES + 1):
             logger.info("Attempt %d/%d", attempt, MAX_RETRIES)
 
-            raw = client.generate(model=MODEL, prompt=current_prompt)
+            raw = client.generate(model=model, prompt=current_prompt)
             previous_response = raw
             cleaned = clean_response(raw)
 
@@ -108,7 +108,8 @@ def run_extraction(schema_path: Path, document_text: str) -> ExtractionResult:
                     schema, document_text, hard_errors, previous_response
                 )
 
-    assert last_result is not None  # loop always runs at least once
+    if last_result is None:
+        raise RuntimeError("Extraction loop exited without producing a result")
     return last_result
 
 
