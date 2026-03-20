@@ -1,18 +1,21 @@
-"""Minimal extraction pipeline orchestrator — Session 1."""
+"""Extraction pipeline orchestrator."""
 
 import json
 import logging
 from pathlib import Path
 
+from schema_extract.extraction.cleaner import clean_response
 from schema_extract.extraction.client import OllamaClient
-from schema_extract.extraction.prompt import build_prompt
+from schema_extract.extraction.prompt import build_prompt, build_retry_prompt
+from schema_extract.extraction.validator import validate_extraction
+from schema_extract.models.results import ExtractionResult
 from schema_extract.models.schemas import ExtractionSchema
 
 logger = logging.getLogger(__name__)
 
 MODEL = "llama3.1:8b"
+MAX_RETRIES = 3
 
-# Resolve paths relative to this file so the module works from any working directory.
 # Python note: `__file__` is the path to the current module. `.parent` walks up the
 # directory tree — equivalent to File.getParentFile() in Java.
 _REPO_ROOT = Path(__file__).parent.parent.parent
@@ -20,15 +23,21 @@ _DEFAULT_SCHEMA = _REPO_ROOT / "schemas" / "job_posting.json"
 _DEFAULT_SAMPLE = _REPO_ROOT / "samples" / "job_postings" / "sample_01.txt"
 
 
-def run_extraction(schema_path: Path, document_text: str) -> str:
-    """Load a schema, build a prompt, call Ollama, and return the raw model response.
+def run_extraction(schema_path: Path, document_text: str) -> ExtractionResult:
+    """Load a schema, build a prompt, call Ollama, clean + validate the response.
+
+    Retries up to MAX_RETRIES times on hard failures (JSON parse errors or field
+    type mismatches). Null values on required fields are soft failures: they reduce
+    confidence and set is_partial=True but do not trigger a retry, because at
+    temperature=0.0 retrying the same document produces the same result.
 
     Args:
         schema_path: Path to the JSON schema definition file.
         document_text: The raw unstructured text to extract from.
 
     Returns:
-        Raw text response from the model (not yet validated or parsed).
+        ExtractionResult with extracted fields, confidence score, is_partial flag,
+        validation errors, and the number of model calls made.
 
     Raises:
         RuntimeError: If Ollama is unreachable.
@@ -38,21 +47,73 @@ def run_extraction(schema_path: Path, document_text: str) -> str:
     schema = ExtractionSchema.from_file(schema_path)
     logger.info("Loaded schema '%s' with %d fields", schema.name, len(schema.fields))
 
-    prompt = build_prompt(schema, document_text)
-    logger.info("Prompt built (%d chars)", len(prompt))
+    current_prompt = build_prompt(schema, document_text)
+    previous_response: str = ""
+    last_result: ExtractionResult | None = None
 
     with OllamaClient() as client:
         if not client.health_check():
             raise RuntimeError("Ollama is not reachable. Is it running?")
-        raw_response = client.generate(model=MODEL, prompt=prompt)
 
-    return raw_response
+        for attempt in range(1, MAX_RETRIES + 1):
+            logger.info("Attempt %d/%d", attempt, MAX_RETRIES)
+
+            raw = client.generate(model=MODEL, prompt=current_prompt)
+            previous_response = raw
+            cleaned = clean_response(raw)
+
+            # --- JSON parse ---
+            try:
+                parsed = json.loads(cleaned)
+            except json.JSONDecodeError as exc:
+                errors = [f"Response is not valid JSON: {exc}"]
+                logger.warning("Attempt %d: parse failure — %s", attempt, exc)
+                if attempt < MAX_RETRIES:
+                    current_prompt = build_retry_prompt(
+                        schema, document_text, errors, previous_response
+                    )
+                    continue
+                # Exhausted retries on parse failure — return empty partial result
+                last_result = ExtractionResult(
+                    extracted={},
+                    confidence=0.0,
+                    is_partial=True,
+                    validation_errors=errors,
+                    attempts=attempt,
+                )
+                break
+
+            # --- Validation ---
+            result, hard_errors = validate_extraction(parsed, schema)
+            result = result.model_copy(update={"attempts": attempt})
+            last_result = result
+
+            if not hard_errors:
+                logger.info(
+                    "Attempt %d: success (confidence=%.2f, is_partial=%s)",
+                    attempt,
+                    result.confidence,
+                    result.is_partial,
+                )
+                break
+
+            logger.warning(
+                "Attempt %d: %d hard validation error(s): %s",
+                attempt,
+                len(hard_errors),
+                hard_errors,
+            )
+            if attempt < MAX_RETRIES:
+                current_prompt = build_retry_prompt(
+                    schema, document_text, hard_errors, previous_response
+                )
+
+    assert last_result is not None  # loop always runs at least once
+    return last_result
 
 
 if __name__ == "__main__":
-    # Demo block — prints intermediate artifacts for inspection during development.
-    # Using print here intentionally (not logging) so output is visible without
-    # configuring a log handler.
+    # Demo block — prints intermediate artifacts for inspection.
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     schema_path = _DEFAULT_SCHEMA
@@ -67,28 +128,17 @@ if __name__ == "__main__":
     print(prompt)
 
     print("\n" + "=" * 70)
-    print(f"CALLING OLLAMA  (model={MODEL})")
+    print(f"CALLING OLLAMA  (model={MODEL}, max_retries={MAX_RETRIES})")
     print("=" * 70)
 
-    with OllamaClient() as client:
-        if not client.health_check():
-            print("ERROR: Ollama is not reachable.")
-            raise SystemExit(1)
-        raw_response = client.generate(model=MODEL, prompt=prompt)
+    result = run_extraction(schema_path, document_text)
 
     print("\n" + "=" * 70)
-    print("RAW MODEL RESPONSE")
+    print("EXTRACTION RESULT")
     print("=" * 70)
-    print(raw_response)
-
-    print("\n" + "=" * 70)
-    print("JSON PARSE ATTEMPT")
-    print("=" * 70)
-    try:
-        parsed = json.loads(raw_response)
-        print("SUCCESS — parsed JSON:")
-        # Python note: `json.dumps(..., indent=2)` pretty-prints a dict/list.
-        print(json.dumps(parsed, indent=2))
-    except json.JSONDecodeError as exc:
-        print(f"FAILED to parse as JSON: {exc}")
-        print("(This is expected on first run — retry logic comes in Session 2)")
+    print(f"  confidence   : {result.confidence:.4f}")
+    print(f"  is_partial   : {result.is_partial}")
+    print(f"  attempts     : {result.attempts}")
+    print(f"  errors       : {result.validation_errors or 'none'}")
+    print()
+    print(json.dumps(result.extracted, indent=2))
