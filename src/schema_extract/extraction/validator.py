@@ -1,6 +1,7 @@
 """Validate parsed extraction output against an ExtractionSchema."""
 
 import logging
+import math
 from typing import Any
 
 from schema_extract.models.results import ExtractionResult
@@ -19,12 +20,14 @@ _TYPE_MAP: dict[str, type] = {
 
 
 def _is_empty(value: Any) -> bool:
-    """Return True if a value carries no information (null, empty str, empty list)."""
+    """Return True if a value carries no information (null, empty str, empty list).
+
+    Note: 0, False, and 0.0 are NOT considered empty — they are valid extracted values.
+    bool is a subclass of int, so _is_empty(False) returns False correctly.
+    """
     if value is None:
         return True
-    if isinstance(value, str) and value == "":
-        return True
-    if isinstance(value, list) and len(value) == 0:
+    if isinstance(value, (str, list)) and not value:
         return True
     return False
 
@@ -43,6 +46,8 @@ def _coerce(value: Any, target_type: str) -> tuple[Any, bool]:
             return coerced, True
         if target_type == "float":
             coerced = float(str(value))
+            if not math.isfinite(coerced):
+                return value, False  # reject Inf/NaN — not valid extracted data
             logger.warning("Coerced %r to float %r", value, coerced)
             return coerced, True
         if target_type == "bool" and isinstance(value, str):
@@ -95,13 +100,16 @@ def validate_extraction(parsed: Any, schema: ExtractionSchema) -> tuple[Extracti
 
     for field in schema.fields:
         raw_value = parsed.get(field.name)
-        expected_python_type = _TYPE_MAP[field.type]
 
         if _is_empty(raw_value):
             extracted[field.name] = raw_value
             if field.required:
                 all_errors.append(f"Required field '{field.name}' is null or empty")
             continue
+
+        if field.type not in _TYPE_MAP:
+            raise ValueError(f"Unknown field type {field.type!r} for field '{field.name}'")
+        expected_python_type = _TYPE_MAP[field.type]
 
         # Type check — note: bool is a subclass of int in Python, so isinstance(True, int)
         # is True. Explicitly reject booleans on non-bool fields before the isinstance check.
