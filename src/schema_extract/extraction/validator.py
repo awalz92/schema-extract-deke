@@ -103,8 +103,10 @@ def validate_extraction(parsed: Any, schema: ExtractionSchema) -> tuple[Extracti
                 all_errors.append(f"Required field '{field.name}' is null or empty")
             continue
 
-        # Type check
-        if not isinstance(raw_value, expected_python_type):
+        # Type check — note: bool is a subclass of int in Python, so isinstance(True, int)
+        # is True. Explicitly reject booleans on non-bool fields before the isinstance check.
+        bool_mismatch = isinstance(raw_value, bool) and field.type != "bool"
+        if bool_mismatch or not isinstance(raw_value, expected_python_type):
             # Attempt coercion before treating as hard error
             coerced, ok = _coerce(raw_value, field.type)
             if ok:
