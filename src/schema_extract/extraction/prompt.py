@@ -68,3 +68,64 @@ JSON:"""
         len(schema.fields),
     )
     return prompt
+
+
+def build_retry_prompt(
+    schema: ExtractionSchema,
+    document: str,
+    errors: list[str],
+    previous_response: str,
+) -> str:
+    """Build a corrective prompt for a retry attempt after a failed extraction.
+
+    Includes the model's previous (bad) response and a description of what was
+    wrong, so the model can produce a corrected output rather than repeating the
+    same mistake.
+
+    Args:
+        schema: The ExtractionSchema defining which fields to extract.
+        document: The original raw document text.
+        errors: List of error strings describing what failed (parse or validation).
+        previous_response: The raw model response from the previous attempt.
+
+    Returns:
+        A formatted prompt string ready to send to the model.
+    """
+    errors_block = "\n".join(f"- {e}" for e in errors)
+    fields_block = "\n".join(_format_field(f) for f in schema.fields)
+
+    prompt = f"""\
+You are a structured data extraction assistant. Your previous attempt to extract \
+data from the document below had errors. Please correct them.
+
+SCHEMA: {schema.name}
+{schema.description}
+
+FIELDS TO EXTRACT:
+{fields_block}
+
+YOUR PREVIOUS RESPONSE (which had errors):
+{previous_response}
+
+ERRORS IN YOUR PREVIOUS RESPONSE:
+{errors_block}
+
+RULES:
+- Return ONLY a valid JSON object. No explanation, no markdown, no code fences.
+- Use null for any field that cannot be determined from the document.
+- For list fields, return a JSON array of strings.
+- For int fields, return a number with no units or currency symbols.
+- Do not infer or guess values that are not present in the document.
+
+DOCUMENT:
+{document}
+
+CORRECTED JSON:"""
+
+    logger.debug(
+        "Built retry prompt for schema '%s' (%d chars, %d errors)",
+        schema.name,
+        len(prompt),
+        len(errors),
+    )
+    return prompt
